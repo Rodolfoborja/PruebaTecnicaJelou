@@ -1,0 +1,31 @@
+service: lambda-orchestrator
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  environment:
+    CUSTOMERS_API_BASE: ${env:CUSTOMERS_API_BASE, 'http://localhost:3001'}
+    ORDERS_API_BASE: ${env:ORDERS_API_BASE, 'http://localhost:3002'}
+    SERVICE_TOKEN: ${env:SERVICE_TOKEN, 'internal-service-token-change-in-production'}
+    JWT_TOKEN: ${env:JWT_TOKEN, 'your-jwt-token-here'}
+
+functions:
+  orchestrator:
+    handler: src/handler.orchestrator
+    events:
+      - httpApi:
+          path: /orchestrator/create-and-confirm-order
+          method: post
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+    lambdaPort: 3004
+    noPrependStageInUrl: true
