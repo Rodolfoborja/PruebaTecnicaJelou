@@ -1,0 +1,444 @@
+openapi: 3.0.0
+info:
+  title: Orders API
+  description: API for managing products and orders in Jelou B2B Orders System
+  version: 1.0.0
+servers:
+  - url: http://localhost:3002
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        sku:
+          type: string
+        name:
+          type: string
+        price_cents:
+          type: integer
+        stock:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    CreateProductRequest:
+      type: object
+      required:
+        - sku
+        - name
+        - price_cents
+        - stock
+      properties:
+        sku:
+          type: string
+          maxLength: 100
+        name:
+          type: string
+          maxLength: 255
+        price_cents:
+          type: integer
+          minimum: 0
+        stock:
+          type: integer
+          minimum: 0
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        price_cents:
+          type: integer
+          minimum: 0
+        stock:
+          type: integer
+          minimum: 0
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        customer_id:
+          type: integer
+        status:
+          type: string
+          enum: [CREATED, CONFIRMED, CANCELED]
+        total_cents:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        order_id:
+          type: integer
+        product_id:
+          type: integer
+        qty:
+          type: integer
+        unit_price_cents:
+          type: integer
+        subtotal_cents:
+          type: integer
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - customer_id
+        - items
+      properties:
+        customer_id:
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - product_id
+              - qty
+            properties:
+              product_id:
+                type: integer
+                minimum: 1
+              qty:
+                type: integer
+                minimum: 1
+
+    ProductListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        cursor:
+          type: integer
+          nullable: true
+        hasMore:
+          type: boolean
+
+    OrderListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        cursor:
+          type: integer
+          nullable: true
+        hasMore:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+
+  /products:
+    post:
+      summary: Create a new product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '409':
+          description: SKU already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List products with pagination
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search by name or SKU
+        - in: query
+          name: cursor
+          schema:
+            type: integer
+            minimum: 0
+          description: Cursor for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results per page
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+
+  /products/{id}:
+    get:
+      summary: Get product by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      summary: Update product price or stock
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders:
+    post:
+      summary: Create a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Invalid request or insufficient stock
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Customer or product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List orders with pagination
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [CREATED, CONFIRMED, CANCELED]
+          description: Filter by order status
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+          description: Filter orders created after this date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+          description: Filter orders created before this date
+        - in: query
+          name: cursor
+          schema:
+            type: integer
+            minimum: 0
+          description: Cursor for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results per page
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+
+  /orders/{id}:
+    get:
+      summary: Get order by ID with items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details with items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/confirm:
+    post:
+      summary: Confirm an order (idempotent)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: header
+          name: X-Idempotency-Key
+          required: false
+          schema:
+            type: string
+          description: Idempotency key for safe retries
+      responses:
+        '200':
+          description: Order confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Order cannot be confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/cancel:
+    post:
+      summary: Cancel an order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order canceled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Order cannot be canceled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
