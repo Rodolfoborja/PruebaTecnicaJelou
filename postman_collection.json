@@ -1,0 +1,541 @@
+{
+  "info": {
+    "name": "Jelou B2B Orders System",
+    "_postman_id": "jelou-b2b-orders-system",
+    "description": "Collection completa para probar las APIs de Customers, Orders y Lambda Orchestrator\n\nIMPORTANTE: Importa también el archivo postman_environment.json para auto-generar el JWT token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Generar JWT Token automáticamente",
+          "function base64url(source) {",
+          "    let encodedSource = CryptoJS.enc.Base64.stringify(source);",
+          "    encodedSource = encodedSource.replace(/=+$/, '');",
+          "    encodedSource = encodedSource.replace(/\\+/g, '-');",
+          "    encodedSource = encodedSource.replace(/\\//g, '_');",
+          "    return encodedSource;",
+          "}",
+          "",
+          "function generateJWT(secret, payload) {",
+          "    const header = {",
+          "        'alg': 'HS256',",
+          "        'typ': 'JWT'",
+          "    };",
+          "    ",
+          "    const stringifiedHeader = CryptoJS.enc.Utf8.parse(JSON.stringify(header));",
+          "    const encodedHeader = base64url(stringifiedHeader);",
+          "    ",
+          "    const stringifiedPayload = CryptoJS.enc.Utf8.parse(JSON.stringify(payload));",
+          "    const encodedPayload = base64url(stringifiedPayload);",
+          "    ",
+          "    const token = encodedHeader + '.' + encodedPayload;",
+          "    const signature = base64url(CryptoJS.HmacSHA256(token, secret));",
+          "    ",
+          "    return token + '.' + signature;",
+          "}",
+          "",
+          "// Solo generar si no existe o está expirado",
+          "const currentToken = pm.environment.get('jwt_token');",
+          "const secret = pm.environment.get('jwt_secret');",
+          "",
+          "if (!currentToken || currentToken === '') {",
+          "    const now = Math.floor(Date.now() / 1000);",
+          "    const payload = {",
+          "        userId: parseInt(pm.environment.get('user_id')),",
+          "        email: pm.environment.get('user_email'),",
+          "        iat: now,",
+          "        exp: now + (24 * 60 * 60) // 24 horas",
+          "    };",
+          "    ",
+          "    const token = generateJWT(secret, payload);",
+          "    pm.environment.set('jwt_token', token);",
+          "    console.log('✓ JWT Token generado automáticamente');",
+          "    console.log('Token expira en 24 horas');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "customers_base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "orders_base_url",
+      "value": "http://localhost:3002",
+      "type": "string"
+    },
+    {
+      "key": "lambda_base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImlhdCI6MTcwNzAwMDAwMCwiZXhwIjoxNzA3MDg2NDAwfQ.REPLACE_WITH_YOUR_TOKEN",
+      "type": "string"
+    },
+    {
+      "key": "service_token",
+      "value": "internal-service-token-change-in-production",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Customers API",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_base_url}}/health",
+              "host": ["{{customers_base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ACME Corporation\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"+1-555-0100\"\n}"
+            },
+            "url": {
+              "raw": "{{customers_base_url}}/customers",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{customers_base_url}}/customers/1",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers", "1"]
+            }
+          }
+        },
+        {
+          "name": "List Customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{customers_base_url}}/customers?limit=20",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "ACME",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "cursor",
+                  "value": "0",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ACME Corporation Updated\",\n  \"phone\": \"+1-555-0999\"\n}"
+            },
+            "url": {
+              "raw": "{{customers_base_url}}/customers/1",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Customer (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{customers_base_url}}/customers/1",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer (Internal)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{service_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{customers_base_url}}/internal/customers/1",
+              "host": ["{{customers_base_url}}"],
+              "path": ["internal", "customers", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders API",
+      "item": [
+        {
+          "name": "Products",
+          "item": [
+            {
+              "name": "Health Check",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orders_base_url}}/health",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["health"]
+                }
+              }
+            },
+            {
+              "name": "Create Product",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sku\": \"PROD-006\",\n  \"name\": \"Wireless Keyboard\",\n  \"price_cents\": 7990,\n  \"stock\": 100\n}"
+                },
+                "url": {
+                  "raw": "{{orders_base_url}}/products",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["products"]
+                }
+              }
+            },
+            {
+              "name": "Get Product by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{orders_base_url}}/products/1",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["products", "1"]
+                }
+              }
+            },
+            {
+              "name": "List Products",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{orders_base_url}}/products?limit=20",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["products"],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "Mouse",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "0",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Product",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"price_cents\": 139900,\n  \"stock\": 45\n}"
+                },
+                "url": {
+                  "raw": "{{orders_base_url}}/products/1",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["products", "1"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Orders",
+          "item": [
+            {
+              "name": "Create Order",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 2,\n      \"qty\": 3\n    },\n    {\n      \"product_id\": 3,\n      \"qty\": 1\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{orders_base_url}}/orders",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["orders"]
+                }
+              }
+            },
+            {
+              "name": "Get Order by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{orders_base_url}}/orders/1",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["orders", "1"]
+                }
+              }
+            },
+            {
+              "name": "List Orders",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{orders_base_url}}/orders?limit=20",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["orders"],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "CREATED",
+                      "disabled": true
+                    },
+                    {
+                      "key": "from",
+                      "value": "2024-01-01",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "2024-12-31",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "0",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Confirm Order (Idempotent)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Idempotency-Key",
+                    "value": "unique-key-{{$timestamp}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{orders_base_url}}/orders/1/confirm",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["orders", "1", "confirm"]
+                }
+              }
+            },
+            {
+              "name": "Cancel Order",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{orders_base_url}}/orders/1/cancel",
+                  "host": ["{{orders_base_url}}"],
+                  "path": ["orders", "1", "cancel"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lambda Orchestrator",
+      "item": [
+        {
+          "name": "Create and Confirm Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 2,\n      \"qty\": 3\n    }\n  ],\n  \"idempotency_key\": \"abc-123-{{$timestamp}}\",\n  \"correlation_id\": \"req-789\"\n}"
+            },
+            "url": {
+              "raw": "{{lambda_base_url}}/orchestrator/create-and-confirm-order",
+              "host": ["{{lambda_base_url}}"],
+              "path": ["orchestrator", "create-and-confirm-order"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

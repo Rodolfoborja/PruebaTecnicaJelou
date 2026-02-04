@@ -1,0 +1,345 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-02-03T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_jelou",
+      "_type": "workspace",
+      "name": "Jelou B2B Orders System",
+      "description": "APIs de Customers, Orders y Lambda Orchestrator"
+    },
+    {
+      "_id": "env_jelou",
+      "_type": "environment",
+      "parentId": "wrk_jelou",
+      "name": "Base Environment",
+      "data": {
+        "customers_base_url": "http://localhost:3001",
+        "orders_base_url": "http://localhost:3002",
+        "lambda_base_url": "http://localhost:3000",
+        "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.REPLACE_WITH_YOUR_TOKEN",
+        "service_token": "internal-service-token-change-in-production"
+      }
+    },
+    {
+      "_id": "fld_customers",
+      "_type": "request_group",
+      "parentId": "wrk_jelou",
+      "name": "Customers API"
+    },
+    {
+      "_id": "req_customers_health",
+      "_type": "request",
+      "parentId": "fld_customers",
+      "name": "Health Check",
+      "method": "GET",
+      "url": "{{ _.customers_base_url }}/health"
+    },
+    {
+      "_id": "req_customers_create",
+      "_type": "request",
+      "parentId": "fld_customers",
+      "name": "Create Customer",
+      "method": "POST",
+      "url": "{{ _.customers_base_url }}/customers",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"ACME Corporation\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"+1-555-0100\"\n}"
+      }
+    },
+    {
+      "_id": "req_customers_get",
+      "_type": "request",
+      "parentId": "fld_customers",
+      "name": "Get Customer by ID",
+      "method": "GET",
+      "url": "{{ _.customers_base_url }}/customers/1",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_customers_list",
+      "_type": "request",
+      "parentId": "fld_customers",
+      "name": "List Customers",
+      "method": "GET",
+      "url": "{{ _.customers_base_url }}/customers?limit=20",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_customers_update",
+      "_type": "request",
+      "parentId": "fld_customers",
+      "name": "Update Customer",
+      "method": "PUT",
+      "url": "{{ _.customers_base_url }}/customers/1",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"ACME Corporation Updated\",\n  \"phone\": \"+1-555-0999\"\n}"
+      }
+    },
+    {
+      "_id": "req_customers_delete",
+      "_type": "request",
+      "parentId": "fld_customers",
+      "name": "Delete Customer",
+      "method": "DELETE",
+      "url": "{{ _.customers_base_url }}/customers/1",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_customers_internal",
+      "_type": "request",
+      "parentId": "fld_customers",
+      "name": "Get Customer (Internal)",
+      "method": "GET",
+      "url": "{{ _.customers_base_url }}/internal/customers/1",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.service_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_orders",
+      "_type": "request_group",
+      "parentId": "wrk_jelou",
+      "name": "Orders API"
+    },
+    {
+      "_id": "fld_products",
+      "_type": "request_group",
+      "parentId": "fld_orders",
+      "name": "Products"
+    },
+    {
+      "_id": "req_orders_health",
+      "_type": "request",
+      "parentId": "fld_products",
+      "name": "Health Check",
+      "method": "GET",
+      "url": "{{ _.orders_base_url }}/health"
+    },
+    {
+      "_id": "req_products_create",
+      "_type": "request",
+      "parentId": "fld_products",
+      "name": "Create Product",
+      "method": "POST",
+      "url": "{{ _.orders_base_url }}/products",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"sku\": \"PROD-006\",\n  \"name\": \"Wireless Keyboard\",\n  \"price_cents\": 7990,\n  \"stock\": 100\n}"
+      }
+    },
+    {
+      "_id": "req_products_get",
+      "_type": "request",
+      "parentId": "fld_products",
+      "name": "Get Product by ID",
+      "method": "GET",
+      "url": "{{ _.orders_base_url }}/products/1",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_products_list",
+      "_type": "request",
+      "parentId": "fld_products",
+      "name": "List Products",
+      "method": "GET",
+      "url": "{{ _.orders_base_url }}/products?limit=20",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_products_update",
+      "_type": "request",
+      "parentId": "fld_products",
+      "name": "Update Product",
+      "method": "PATCH",
+      "url": "{{ _.orders_base_url }}/products/1",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"price_cents\": 139900,\n  \"stock\": 45\n}"
+      }
+    },
+    {
+      "_id": "fld_orders_orders",
+      "_type": "request_group",
+      "parentId": "fld_orders",
+      "name": "Orders"
+    },
+    {
+      "_id": "req_orders_create",
+      "_type": "request",
+      "parentId": "fld_orders_orders",
+      "name": "Create Order",
+      "method": "POST",
+      "url": "{{ _.orders_base_url }}/orders",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 2,\n      \"qty\": 3\n    },\n    {\n      \"product_id\": 3,\n      \"qty\": 1\n    }\n  ]\n}"
+      }
+    },
+    {
+      "_id": "req_orders_get",
+      "_type": "request",
+      "parentId": "fld_orders_orders",
+      "name": "Get Order by ID",
+      "method": "GET",
+      "url": "{{ _.orders_base_url }}/orders/1",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_orders_list",
+      "_type": "request",
+      "parentId": "fld_orders_orders",
+      "name": "List Orders",
+      "method": "GET",
+      "url": "{{ _.orders_base_url }}/orders?limit=20",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_orders_confirm",
+      "_type": "request",
+      "parentId": "fld_orders_orders",
+      "name": "Confirm Order",
+      "method": "POST",
+      "url": "{{ _.orders_base_url }}/orders/1/confirm",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        },
+        {
+          "name": "X-Idempotency-Key",
+          "value": "unique-key-{{ _.timestamp }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_orders_cancel",
+      "_type": "request",
+      "parentId": "fld_orders_orders",
+      "name": "Cancel Order",
+      "method": "POST",
+      "url": "{{ _.orders_base_url }}/orders/1/cancel",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.jwt_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_lambda",
+      "_type": "request_group",
+      "parentId": "wrk_jelou",
+      "name": "Lambda Orchestrator"
+    },
+    {
+      "_id": "req_lambda_orchestrate",
+      "_type": "request",
+      "parentId": "fld_lambda",
+      "name": "Create and Confirm Order",
+      "method": "POST",
+      "url": "{{ _.lambda_base_url }}/orchestrator/create-and-confirm-order",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 2,\n      \"qty\": 3\n    }\n  ],\n  \"idempotency_key\": \"abc-123\",\n  \"correlation_id\": \"req-789\"\n}"
+      }
+    }
+  ]
+}
